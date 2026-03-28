@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { SpeedInsights } from '@vercel/speed-insights/react';
 import { UniversalResultBoard } from './components/UniversalResultBoard';
 import { 
   Target, 
@@ -338,6 +339,9 @@ function MainApp() {
 
       {/* Grid Pattern Overlay */}
       <div className="fixed inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 pointer-events-none mix-blend-overlay" />
+      
+      {/* Vercel Speed Insights */}
+      <SpeedInsights />
     </div>
   );
 }
