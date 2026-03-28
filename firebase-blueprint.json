@@ -1,0 +1,202 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "Stores user profile information and access limits.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "displayName": { "type": "string" },
+        "email": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "class": { "type": "string" },
+        "targetScore": { "type": "string" },
+        "studyHours": { "type": "string" },
+        "points": { "type": "number" },
+        "accessCount": { "type": "number", "description": "Number of files/tests the user can currently access." },
+        "role": { "type": "string", "enum": ["admin", "user"] },
+        "streak": { "type": "number" },
+        "lastLoginDate": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email"]
+    },
+    "Subject": {
+      "title": "Subject",
+      "description": "A study subject containing chapters.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "icon": { "type": "string", "description": "Lucide icon name" },
+        "color": { "type": "string" },
+        "order": { "type": "number" }
+      },
+      "required": ["name"]
+    },
+    "Chapter": {
+      "title": "Chapter",
+      "description": "A chapter within a subject.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "subjectId": { "type": "string" },
+        "name": { "type": "string" },
+        "order": { "type": "number" }
+      },
+      "required": ["name", "subjectId"]
+    },
+    "Material": {
+      "title": "Material",
+      "description": "A study material (PDF, Note, or Test) within a chapter.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "chapterId": { "type": "string" },
+        "subjectId": { "type": "string" },
+        "title": { "type": "string" },
+        "type": { "type": "string", "enum": ["pdf", "note", "test"] },
+        "url": { "type": "string" },
+        "content": { "type": "string" },
+        "order": { "type": "number" }
+      },
+      "required": ["title", "type", "chapterId"]
+    },
+    "TestRanking": {
+      "title": "Test Ranking",
+      "description": "Stores user performance in tests for the leaderboard.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "name": { "type": "string" },
+        "time": { "type": "string", "description": "Time taken to complete the test (e.g., '02:15')" },
+        "points": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "name", "time"]
+    },
+    "LiveTest": {
+      "title": "Live Test",
+      "description": "A live test event.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "date": { "type": "string" },
+        "time": { "type": "string" },
+        "status": { "type": "string", "enum": ["scheduled", "active", "completed"] }
+      },
+      "required": ["title", "date", "time"]
+    },
+    "LiveTestQuestion": {
+      "title": "Live Test Question",
+      "description": "A question within a live test.",
+      "type": "object",
+      "properties": {
+        "questionText": { "type": "string" },
+        "options": { 
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "correctAnswer": { "type": "string" }
+      },
+      "required": ["questionText", "options", "correctAnswer"]
+    },
+    "TestResult": {
+      "title": "Test Result",
+      "description": "A user's result for a specific test.",
+      "type": "object",
+      "properties": {
+        "testId": { "type": "string" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "userPhoto": { "type": "string" },
+        "score": { "type": "number" },
+        "timeTaken": { "type": "number" },
+        "submittedAt": { "type": "string", "format": "date-time" },
+        "userAnswers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "questionId": { "type": "string" },
+              "questionText": { "type": "string" },
+              "userChoice": { "type": "string" },
+              "correctChoice": { "type": "string" }
+            }
+          }
+        }
+      },
+      "required": ["testId", "userId", "userName", "score", "timeTaken", "submittedAt", "userAnswers"]
+    },
+    "ChatMessage": {
+      "title": "Chat Message",
+      "description": "A single message in a chat conversation.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "role": { "type": "string", "enum": ["user", "ai"] },
+        "text": { "type": "string" },
+        "timestamp": { "type": "number" }
+      },
+      "required": ["id", "role", "text", "timestamp"]
+    },
+    "UserChat": {
+      "title": "User Chat",
+      "description": "Stores the chat history for a specific user.",
+      "type": "object",
+      "properties": {
+        "messages": {
+          "type": "array",
+          "items": { "$ref": "ChatMessage" }
+        }
+      },
+      "required": ["messages"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User profile documents."
+    },
+    "/subjects/{subjectId}": {
+      "schema": "Subject",
+      "description": "Subject documents."
+    },
+    "/subjects/{subjectId}/chapters/{chapterId}": {
+      "schema": "Chapter",
+      "description": "Chapter documents within a subject."
+    },
+    "/subjects/{subjectId}/chapters/{chapterId}/materials/{materialId}": {
+      "schema": "Material",
+      "description": "Material documents within a chapter."
+    },
+    "/test_rankings/{rankingId}": {
+      "schema": "TestRanking",
+      "description": "Global test performance rankings."
+    },
+    "/live_tests/{testId}": {
+      "schema": "LiveTest",
+      "description": "Live test documents."
+    },
+    "/live_tests/{testId}/questions/{questionId}": {
+      "schema": "LiveTestQuestion",
+      "description": "Questions for a live test."
+    },
+    "/TestResults/{resultId}": {
+      "schema": "TestResult",
+      "description": "User test results."
+    },
+    "/UserChats/{userId}": {
+      "schema": "UserChat",
+      "description": "User chat history documents."
+    },
+    "/chapters/{chapterId}": {
+      "schema": "Chapter",
+      "description": "Top-level chapter documents (legacy/fallback)."
+    },
+    "/materials/{materialId}": {
+      "schema": "Material",
+      "description": "Top-level material documents (legacy/fallback)."
+    }
+  }
+}

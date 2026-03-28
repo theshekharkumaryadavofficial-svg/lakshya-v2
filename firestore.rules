@@ -1,0 +1,165 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (
+          (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+           get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin') ||
+          request.auth.token.email == "the.shekharkumaryadavofficial@gmail.com"
+        );
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'displayName', 'email', 'class', 'targetScore', 'studyHours']) &&
+             data.uid is string && data.uid.size() > 0 &&
+             data.displayName is string && data.displayName.size() > 0 && data.displayName.size() < 100 &&
+             data.email is string && data.email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$") &&
+             data.class in ['10th', '12th'] &&
+             data.targetScore is string && data.targetScore.size() > 0 && data.targetScore.size() < 50 &&
+             data.studyHours is string && data.studyHours.size() > 0 && data.studyHours.size() < 50 &&
+             (!('points' in data) || data.points is number) &&
+             (!('accessCount' in data) || data.accessCount is number) &&
+             (!('role' in data) || data.role in ['admin', 'user']) &&
+             (!('streak' in data) || data.streak is number) &&
+             (!('lastLoginDate' in data) || data.lastLoginDate is string) &&
+             (!('photoURL' in data) || (data.photoURL is string && data.photoURL.size() < 500));
+    }
+
+    function isValidUserChat(data) {
+      return data.keys().hasAll(['messages']) &&
+             data.messages is list &&
+             data.messages.size() <= 500; // Limit chat history size
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /test/connection {
+      allow read: if true;
+    }
+
+    match /UserChats/{userId} {
+      allow read: if isOwner(userId);
+      allow write: if isOwner(userId) && isValidUserChat(request.resource.data);
+    }
+
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      
+      allow create: if isOwner(userId) && isValidUser(request.resource.data) && 
+                    (!('role' in request.resource.data) || request.resource.data.role == 'user' || isAdmin());
+      
+      allow update: if (isOwner(userId) && isValidUser(request.resource.data) && 
+                       request.resource.data.uid == resource.data.uid &&
+                       request.resource.data.email == resource.data.email &&
+                       (!('role' in request.resource.data) || request.resource.data.role == resource.data.role)) ||
+                    isAdmin();
+      
+      allow delete: if isAdmin();
+    }
+
+    match /subjects/{subjectId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+
+      match /chapters/{chapterId} {
+        allow read: if isAuthenticated();
+        allow write: if isAdmin();
+
+        match /materials/{materialId} {
+          allow read: if isAuthenticated();
+          allow write: if isAdmin();
+        }
+      }
+    }
+
+    match /chapters/{chapterId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    match /materials/{materialId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    match /test_subjects/{subjectId} {
+      allow read: if true;
+      allow create: if isAdmin() && request.resource.data.keys().hasAll(['name', 'order']) &&
+                       request.resource.data.name is string && request.resource.data.name.size() > 0 && request.resource.data.name.size() < 100 &&
+                       request.resource.data.order is number;
+      allow update: if isAdmin() && request.resource.data.keys().hasAll(['name', 'order']) &&
+                       request.resource.data.name is string && request.resource.data.name.size() > 0 && request.resource.data.name.size() < 100 &&
+                       request.resource.data.order is number;
+      allow delete: if isAdmin();
+    }
+
+    match /test_rankings/{rankingId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && 
+                    request.resource.data.userId == request.auth.uid &&
+                    request.resource.data.keys().hasAll(['userId', 'name', 'time']) &&
+                    request.resource.data.name is string &&
+                    request.resource.data.time is string;
+      allow update: if isAuthenticated() && resource.data.userId == request.auth.uid &&
+                    request.resource.data.userId == request.auth.uid &&
+                    request.resource.data.keys().hasAll(['userId', 'name', 'time']) &&
+                    request.resource.data.name is string &&
+                    request.resource.data.time is string;
+      allow delete: if isAdmin();
+    }
+
+    match /live_tests/{testId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+      
+      match /questions/{questionId} {
+        allow read: if isAuthenticated();
+        allow write: if isAdmin();
+      }
+    }
+
+    match /TestResults/{resultId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && 
+                    request.resource.data.userId == request.auth.uid &&
+                    request.resource.data.keys().hasAll(['testId', 'userId', 'userName', 'score', 'timeTaken', 'submittedAt', 'userAnswers']) &&
+                    request.resource.data.testId is string &&
+                    request.resource.data.userId is string &&
+                    request.resource.data.userName is string &&
+                    request.resource.data.score is number &&
+                    request.resource.data.timeTaken is number &&
+                    request.resource.data.submittedAt is string &&
+                    request.resource.data.userAnswers is list;
+      allow update: if isAuthenticated() && resource.data.userId == request.auth.uid &&
+                    request.resource.data.userId == request.auth.uid &&
+                    request.resource.data.keys().hasAll(['testId', 'userId', 'userName', 'score', 'timeTaken', 'submittedAt', 'userAnswers']) &&
+                    request.resource.data.testId is string &&
+                    request.resource.data.userId is string &&
+                    request.resource.data.userName is string &&
+                    request.resource.data.score is number &&
+                    request.resource.data.timeTaken is number &&
+                    request.resource.data.submittedAt is string &&
+                    request.resource.data.userAnswers is list;
+      allow delete: if isAdmin();
+    }
+
+    // Default deny
+    match /{path=**} {
+      allow read, write: if false;
+    }
+  }
+}

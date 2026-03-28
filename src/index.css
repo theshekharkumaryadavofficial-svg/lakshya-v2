@@ -1,0 +1,15 @@
+@import "tailwindcss";
+
+@layer base {
+  .markdown-body a {
+    color: #22d3ee;
+    text-decoration: underline;
+    font-weight: bold;
+  }
+  .markdown-body p {
+    margin-bottom: 0.5rem;
+  }
+  .markdown-body p:last-child {
+    margin-bottom: 0;
+  }
+}
