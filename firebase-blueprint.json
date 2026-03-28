@@ -158,6 +158,18 @@
       "schema": "UserProfile",
       "description": "User profile documents."
     },
+    "/users/{userId}/studySchedule/daily": {
+      "schema": "UserChat",
+      "description": "User's daily study schedule."
+    },
+    "/users/{userId}/chatHistory/main": {
+      "schema": "UserChat",
+      "description": "User's chat history with Gemini."
+    },
+    "/users/{userId}/testResults/{resultId}": {
+      "schema": "TestResult",
+      "description": "User's individual test results."
+    },
     "/subjects/{subjectId}": {
       "schema": "Subject",
       "description": "Subject documents."
@@ -181,14 +193,6 @@
     "/live_tests/{testId}/questions/{questionId}": {
       "schema": "LiveTestQuestion",
       "description": "Questions for a live test."
-    },
-    "/TestResults/{resultId}": {
-      "schema": "TestResult",
-      "description": "User test results."
-    },
-    "/UserChats/{userId}": {
-      "schema": "UserChat",
-      "description": "User chat history documents."
     },
     "/chapters/{chapterId}": {
       "schema": "Chapter",

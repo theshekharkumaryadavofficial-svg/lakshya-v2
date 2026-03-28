@@ -921,7 +921,7 @@ function LakshyaTab({ profile }: { profile: UserProfile | null }) {
   useEffect(() => {
     if (!profile?.uid) return;
 
-    const chatRef = doc(db, 'UserChats', profile.uid);
+    const chatRef = doc(db, 'users', profile.uid, 'chatHistory', 'main');
     const unsubscribe = onSnapshot(chatRef, (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
@@ -962,11 +962,11 @@ function LakshyaTab({ profile }: { profile: UserProfile | null }) {
     localStorage.setItem('lakshya_chats', JSON.stringify(newMessages));
     
     // Update Firebase
-    const chatRef = doc(db, 'UserChats', profile.uid);
+    const chatRef = doc(db, 'users', profile.uid, 'chatHistory', 'main');
     try {
       await setDoc(chatRef, { messages: newMessages }, { merge: true });
     } catch (error) {
-      handleFirestoreError(error, OperationType.WRITE, `UserChats/${profile.uid}`);
+      handleFirestoreError(error, OperationType.WRITE, `users/${profile.uid}/chatHistory/main`);
     }
 
     setLoading(true);
@@ -1016,11 +1016,11 @@ function LakshyaTab({ profile }: { profile: UserProfile | null }) {
     if (window.confirm("Are you sure you want to clear all chat history?")) {
       setMessages([]);
       localStorage.removeItem('lakshya_chats');
-      const chatRef = doc(db, 'UserChats', profile.uid);
+      const chatRef = doc(db, 'users', profile.uid, 'chatHistory', 'main');
       try {
         await setDoc(chatRef, { messages: [] }, { merge: true });
       } catch (error) {
-        handleFirestoreError(error, OperationType.WRITE, `UserChats/${profile.uid}`);
+        handleFirestoreError(error, OperationType.WRITE, `users/${profile.uid}/chatHistory/main`);
       }
     }
   };
@@ -2311,23 +2311,26 @@ function StudyPlanner({ profile }: { profile: UserProfile | null }) {
   const notifiedBlocks = useRef<string[]>([]);
   const alarmTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Load from localStorage
+  // Load from Firestore
   useEffect(() => {
-    const saved = localStorage.getItem('lakshya_study_schedule');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        // Normalize data to include completed field if missing
-        const normalized = parsed.map((b: any) => ({
-          ...b,
-          completed: b.completed ?? false
-        }));
-        setDailySchedule(normalized.sort((a: StudyBlock, b: StudyBlock) => a.startTime.localeCompare(b.startTime)));
-      } catch (e) {
-        console.error("Failed to parse schedule", e);
+    if (!profile?.uid) return;
+
+    const scheduleRef = doc(db, 'users', profile.uid, 'studySchedule', 'daily');
+    const unsubscribe = onSnapshot(scheduleRef, (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        if (data.schedule) {
+          const normalized = data.schedule.map((b: any) => ({
+            ...b,
+            completed: b.completed ?? false
+          }));
+          setDailySchedule(normalized.sort((a: StudyBlock, b: StudyBlock) => a.startTime.localeCompare(b.startTime)));
+        }
       }
-    }
-  }, []);
+    });
+
+    return () => unsubscribe();
+  }, [profile?.uid]);
 
   const playAlarmSound = () => {
     try {
@@ -2422,10 +2425,18 @@ function StudyPlanner({ profile }: { profile: UserProfile | null }) {
     };
   }, [dailySchedule]);
 
-  const saveSchedule = (newSchedule: StudyBlock[]) => {
+  const saveSchedule = async (newSchedule: StudyBlock[]) => {
     const sorted = [...newSchedule].sort((a, b) => a.startTime.localeCompare(b.startTime));
     setDailySchedule(sorted);
-    localStorage.setItem('lakshya_study_schedule', JSON.stringify(sorted));
+    
+    if (profile?.uid) {
+      const scheduleRef = doc(db, 'users', profile.uid, 'studySchedule', 'daily');
+      try {
+        await setDoc(scheduleRef, { schedule: sorted }, { merge: true });
+      } catch (error) {
+        handleFirestoreError(error, OperationType.WRITE, `users/${profile.uid}/studySchedule/daily`);
+      }
+    }
   };
 
   const handleSaveBlock = (e: React.FormEvent) => {
@@ -3025,12 +3036,14 @@ export function LiveTestArena({ onExit, profile, testId }: { onExit?: () => void
     };
 
     try {
-      await setDoc(doc(db, 'TestResults', `${profile.uid}_${testId}`), testResult);
+      const resultRef = doc(db, 'users', profile.uid, 'testResults', testId);
+      await setDoc(resultRef, testResult);
       setResultsData(testResult);
       setTestState('finished');
       setShowResults(true);
     } catch (error) {
       console.error("Error submitting test:", error);
+      handleFirestoreError(error, OperationType.WRITE, `users/${profile.uid}/testResults/${testId}`);
       // Fallback to show results even if saving fails
       setResultsData(testResult);
       setTestState('finished');
