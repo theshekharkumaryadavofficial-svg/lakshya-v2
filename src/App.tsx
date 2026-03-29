@@ -132,9 +132,48 @@ interface Material {
   order: number;
 }
 
+class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean }> {
+  constructor(props: { children: ReactNode }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(_: Error) {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error("Uncaught error:", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+          <div className="bg-white p-8 rounded-2xl shadow-xl max-w-md w-full text-center">
+            <XCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">Something went wrong</h1>
+            <p className="text-gray-600 mb-6">We encountered an unexpected error. Please try refreshing the page.</p>
+            <button 
+              onClick={() => window.location.reload()}
+              className="w-full bg-blue-600 text-white py-3 rounded-xl font-semibold hover:bg-blue-700 transition-colors"
+            >
+              Refresh Page
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
 export default function App() {
   return (
-    <MainApp />
+    <ErrorBoundary>
+      <MainApp />
+    </ErrorBoundary>
   );
 }
 
@@ -972,7 +1011,12 @@ function LakshyaTab({ profile }: { profile: UserProfile | null }) {
     setLoading(true);
 
     try {
-      const apiKey = import.meta.env.VITE_GEMINI_API_KEY || '';
+      const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+      
+      if (!apiKey) {
+        throw new Error("Gemini API Key is missing. Please configure VITE_GEMINI_API_KEY in Vercel environment variables.");
+      }
+
       const ai = new GoogleGenAI({ apiKey });
       
       const response = await ai.models.generateContent({
