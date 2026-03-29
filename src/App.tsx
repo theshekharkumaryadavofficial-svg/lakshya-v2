@@ -972,10 +972,11 @@ function LakshyaTab({ profile }: { profile: UserProfile | null }) {
     setLoading(true);
 
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
+      const apiKey = import.meta.env.VITE_GEMINI_API_KEY || '';
+      const ai = new GoogleGenAI({ apiKey });
       
       const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
+        model: "gemini-1.5-flash",
         contents: userMessageText,
         config: {
           systemInstruction: "You are Lakshya (लक्ष्य), a helpful AI assistant for Bihar Board students. Always respond in Hindi (हिंदी). Keep answers concise and accurate. Use bullet points and bold text for readability. If the user asks to generate an image, visualize a scene, or convert a page to a computer text file/image, you can provide a link to Pollinations.ai using the format: https://pollinations.ai/p/[prompt]?width=1024&height=1024&seed=42. For example, if they want a photo of a computer, suggest https://pollinations.ai/p/computer?width=1024&height=1024.",
